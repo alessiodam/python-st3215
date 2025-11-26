@@ -25,7 +25,7 @@ try:
         servo_objects[1].sram.write_target_location(3000, reg=True)
 
         print("Executing all movements simultaneously!")
-        controller.broadcast_action()
+        controller.broadcast.action()
         time.sleep(2)
 
         print("Preparing opposite movements...")
@@ -33,7 +33,7 @@ try:
         servo_objects[1].sram.write_target_location(1000, reg=True)
 
         print("Executing!")
-        controller.broadcast_action()
+        controller.broadcast.action()
         time.sleep(2)
 
         for servo in servo_objects:

@@ -1,6 +1,6 @@
 [project]
 name = "python-st3215"
-version = "0.0.1"
+version = "1.0.0"
 authors = [
   { name="Alessio D'Ambrosio", email="alessio@alessiodam.dev" },
 ]
@@ -11,7 +11,7 @@ dependencies = [
     "pyserial >= 3.4",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Manufacturing",

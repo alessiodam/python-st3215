@@ -3,7 +3,8 @@ import serial
 
 from .servo import Servo
 from .instructions import Instruction
-from .errors import ST3215Error, ServoNotRespondingError, InvalidInstructionError
+from .errors import ServoNotRespondingError, InvalidInstructionError
+from .decorators import validate_servo_id
 
 from typing import Optional, Sequence
 
@@ -33,13 +34,21 @@ class ST3215:
         self,
         port: str,
         baudrate: int = 1000000,
-        timeout: float = 0.002,
+        read_timeout: float = 0.002,
     ):
+        """
+        Initialize the ST3215 controller with the given serial port settings.
+        Args:
+            port (str): Serial port to connect to (e.g., 'COM3' or '/dev/ttyUSB0').
+            baudrate (int): Baud rate for serial communication.
+            read_timeout (float): Read timeout in seconds.
+        """
         self.logger.debug(
             f"Initializing ST3215 on port {port} with baudrate {baudrate}"
         )
-        self.ser = serial.Serial(port, baudrate=baudrate, timeout=timeout)
+        self.ser = serial.Serial(port, baudrate=baudrate, timeout=read_timeout)
         self.logger.debug(f"Serial port opened at {baudrate} baud.")
+        self.broadcast = Servo(self, 254)
 
     def close(self):
         if self.ser.is_open:
@@ -120,9 +129,13 @@ class ST3215:
         self.logger.debug(f"Parsed response: {parsed}")
         return parsed
 
+    @validate_servo_id
     def ping(self, servo_id: int):
-        if servo_id == 254:
-            raise ST3215Error("Cannot ping broadcast servo ID 254.")
+        """
+        Send PING command to the servo to check if it is responsive.
+        Returns:
+            dict: Parsed response from the servo if it responds, else None.
+        """
         self.logger.debug(f"Pinging servo {servo_id}")
         packet = self.send_instruction(servo_id, Instruction.PING)
         response = self.read_response(packet)
@@ -131,9 +144,15 @@ class ST3215:
             return parsed
         return None
 
+    @validate_servo_id
     def wrap_servo(self, servo_id: int):
-        if servo_id == 254:
-            raise ST3215Error("Cannot wrap broadcast servo ID 254.")
+        """
+        Create a Servo instance for the given servo ID after verifying it responds to ping.
+        Returns:
+            Servo: An instance of the Servo class for the given ID.
+        Raises:
+            ServoNotRespondingError: If the servo does not respond to ping.
+        """
         parsed = self.ping(servo_id)
         if not parsed or parsed.get("error") != 0:
             raise ServoNotRespondingError(
@@ -142,6 +161,11 @@ class ST3215:
         return Servo(self, servo_id)
 
     def list_servos(self):
+        """
+        Scan for connected servos by pinging all possible IDs (0-253).
+        Returns:
+            List of servo IDs that responded to the ping.
+        """
         found = []
         for servo_id in range(0, 254):
             try:
@@ -151,6 +175,44 @@ class ST3215:
                 continue
         return found
 
-    def broadcast_action(self):
-        self.logger.debug(f"Broadcasting ACTION instruction to all servos")
-        return self.send_instruction(254, Instruction.ACTION)
+    def _sync_write(
+        self, address: int, data_length: int, servo_data: dict[int, Sequence[int]]
+    ):
+        self.logger.debug(
+            f"SYNC WRITE to address {address:#02x} for {len(servo_data)} servos"
+        )
+        parameters = [address, data_length]
+        for servo_id, data in servo_data.items():
+            if len(data) != data_length:
+                raise ValueError(
+                    f"Servo {servo_id} data length {len(data)} does not match "
+                    f"specified length {data_length}"
+                )
+            parameters.append(servo_id)
+            parameters.extend(data)
+        self.send_instruction(0xFE, Instruction.SYNC_WRITE, parameters)
+        self.logger.debug(f"SYNC WRITE command sent, no response expected")
+        return None
+
+    def _sync_read(self, address: int, data_length: int, servo_ids: Sequence[int]):
+        self.logger.debug(
+            f"SYNC READ from address {address:#02x}, length {data_length} "
+            f"for servos {servo_ids}"
+        )
+        parameters = [address, data_length, *servo_ids]
+        packet = self.send_instruction(0xFE, Instruction.SYNC_READ, parameters)
+        responses = {}
+        for servo_id in servo_ids:
+            response = self.read_response(packet)
+            if response:
+                parsed = self.parse_response(response)
+                self.logger.debug(
+                    f"Servo {servo_id}: received SYNC READ response {parsed}"
+                )
+                responses[servo_id] = parsed
+            else:
+                self.logger.warning(
+                    f"Servo {servo_id}: no response received for SYNC READ"
+                )
+                responses[servo_id] = None
+        return responses

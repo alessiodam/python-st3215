@@ -84,80 +84,10 @@ class Servo:
         )
         return self.send(Instruction.REG_WRITE, [address, *values])
 
-    def _sync_read(self, address: int, data_length: int, servo_ids: Sequence[int]):
-        """
-        Send SYNC READ command to query multiple servos at the same time.
-
-        Args:
-            address: The first address to read data from
-            data_length: Length of data to read from each servo (must be same for all)
-            servo_ids: List of servo IDs to query
-
-        Returns:
-            Dictionary mapping servo_id to response data
-            e.g., {1: {'id': 1, 'status': 0, 'parameters': [...]},
-                   2: {'id': 2, 'status': 0, 'parameters': [...]}}
-        """
-        # TODO: Make functions work with this method
-        self.logger.debug(
-            f"SYNC READ from address {address:#02x}, length {data_length} "
-            f"for servos {servo_ids}"
-        )
-
-        parameters = [address, data_length, *servo_ids]
-        packet = self.controller.send_instruction(
-            0xFE, Instruction.SYNC_READ, parameters
-        )
-
-        responses = {}
-        for servo_id in servo_ids:
-            response = self.controller.read_response(packet)
-            if response:
-                parsed = self.controller.parse_response(response)
-                self.logger.debug(
-                    f"Servo {servo_id}: received SYNC READ response {parsed}"
-                )
-                responses[servo_id] = parsed
-            else:
-                self.logger.warning(
-                    f"Servo {servo_id}: no response received for SYNC READ"
-                )
-                responses[servo_id] = None
-
-        return responses
-
     def _sync_write(
         self, address: int, data_length: int, servo_data: dict[int, Sequence[int]]
     ):
-        """
-        Send SYNC WRITE command to control multiple servos at the same time.
+        return self.controller._sync_write(address, data_length, servo_data)
 
-        Args:
-            address: The first address to write data to
-            data_length: Length of data to write to each servo (must be same for all)
-            servo_data: Dictionary mapping servo_id to list of data values
-                       e.g., {1: [0x00, 0x08, 0x00, 0x00, 0xE8, 0x03],
-                              2: [0x00, 0x08, 0x00, 0x00, 0xE8, 0x03]}
-
-        Returns:
-            None (broadcast ID is used, no response expected)
-        """
-        # TODO: Make functions work with this method
-        self.logger.debug(
-            f"SYNC WRITE to address {address:#02x} for {len(servo_data)} servos"
-        )
-
-        parameters = [address, data_length]
-
-        for servo_id, data in servo_data.items():
-            if len(data) != data_length:
-                raise ValueError(
-                    f"Servo {servo_id} data length {len(data)} does not match "
-                    f"specified length {data_length}"
-                )
-            parameters.append(servo_id)
-            parameters.extend(data)
-
-        self.controller.send_instruction(0xFE, Instruction.SYNC_WRITE, parameters)
-        self.logger.debug(f"SYNC WRITE command sent, no response expected")
-        return None
+    def _sync_read(self, address: int, data_length: int, servo_ids: Sequence[int]):
+        return self.controller._sync_read(address, data_length, servo_ids)
