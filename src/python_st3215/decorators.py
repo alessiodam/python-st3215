@@ -1,14 +1,16 @@
 from functools import wraps
-from typing import Callable
+from typing import Any, Callable, TypeVar
+
+F = TypeVar("F", bound=Callable[..., Any])
 
 
-def validate_servo_id(func: Callable) -> Callable:
+def validate_servo_id(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator to validate servo ID is not broadcast ID (254).
     """
 
     @wraps(func)
-    def wrapper(self, servo_id: int, *args, **kwargs):
+    def wrapper(self: Any, servo_id: int, *args: Any, **kwargs: Any) -> Any:
         if servo_id == 254:
             from .errors import ST3215Error
 
@@ -18,13 +20,13 @@ def validate_servo_id(func: Callable) -> Callable:
     return wrapper
 
 
-def validate_broadcast_only(func: Callable) -> Callable:
+def validate_broadcast_only(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator to ensure operation is only used with broadcast servo (ID 254).
     """
 
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         if self.servo.id != 254:
             from .errors import ST3215Error
 
@@ -36,14 +38,16 @@ def validate_broadcast_only(func: Callable) -> Callable:
     return wrapper
 
 
-def validate_value_range(min_val: int, max_val: int) -> Callable:
+def validate_value_range(
+    min_val: int, max_val: int
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator to validate that a value parameter is within the specified range.
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        def wrapper(self, value: int, *args, **kwargs):
+        def wrapper(self: Any, value: int, *args: Any, **kwargs: Any) -> Any:
             if not (min_val <= value <= max_val):
                 raise ValueError(
                     f"{func.__name__}: value {value} out of range [{min_val}, {max_val}]"

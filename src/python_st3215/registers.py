@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Any
+from .errors import ST3215Error
 
 if TYPE_CHECKING:
     from .servo import Servo
@@ -27,7 +28,9 @@ def read_word(servo: "Servo", address: int, signed: bool = False) -> Optional[in
     return raw
 
 
-def write_byte(servo: "Servo", address: int, value: int, reg: bool = False):
+def write_byte(
+    servo: "Servo", address: int, value: int, reg: bool = False
+) -> dict[str, object] | None:
     """Write a single byte to memory."""
     write_fn = servo._reg_write_memory if reg else servo._write_memory
     return write_fn(address, [value & 0xFF])
@@ -35,7 +38,7 @@ def write_byte(servo: "Servo", address: int, value: int, reg: bool = False):
 
 def write_word(
     servo: "Servo", address: int, value: int, signed: bool = False, reg: bool = False
-):
+) -> dict[str, object] | None:
     """Write a 16-bit word to memory."""
     if signed:
         low, high = encode_signed_word(value)
@@ -46,7 +49,7 @@ def write_word(
 
 
 class _EEPROMRegisters:
-    def __init__(self, servo: "Servo"):
+    def __init__(self, servo: "Servo") -> None:
         self.servo = servo
 
     def read_firmware_major_version(self) -> Optional[int]:
@@ -95,7 +98,7 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x05)
 
     @validate_value_range(0, 253)
-    def write_id(self, value: int, reg: bool = False):
+    def write_id(self, value: int, reg: bool = False) -> dict[str, object] | None:
         """
         Set the servo ID.
 
@@ -127,7 +130,7 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x06)
 
     @validate_value_range(0, 7)
-    def write_baudrate(self, value: int, reg: bool = False):
+    def write_baudrate(self, value: int, reg: bool = False) -> dict[str, object] | None:
         """
         Set the baud rate.
 
@@ -150,7 +153,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x07)
 
     @validate_value_range(0, 254)
-    def write_return_delay(self, value: int, reg: bool = False):
+    def write_return_delay(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the return delay time.
 
@@ -175,7 +180,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x08)
 
     @validate_value_range(0, 1)
-    def write_response_status_level(self, value: int, reg: bool = False):
+    def write_response_status_level(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the response status level.
 
@@ -200,7 +207,9 @@ class _EEPROMRegisters:
         return read_word(self.servo, 0x09)
 
     @validate_value_range(0, 4094)
-    def write_min_angle_limit(self, value: int, reg: bool = False):
+    def write_min_angle_limit(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the minimum angle limit.
 
@@ -225,7 +234,9 @@ class _EEPROMRegisters:
         return read_word(self.servo, 0x0B)
 
     @validate_value_range(1, 4095)
-    def write_max_angle_limit(self, value: int, reg: bool = False):
+    def write_max_angle_limit(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the maximum angle limit.
 
@@ -249,7 +260,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x0D)
 
     @validate_value_range(0, 100)
-    def write_max_temperature_limit(self, value: int, reg: bool = False):
+    def write_max_temperature_limit(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the maximum temperature limit.
 
@@ -273,7 +286,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x0E)
 
     @validate_value_range(0, 254)
-    def write_max_input_voltage(self, value: int, reg: bool = False):
+    def write_max_input_voltage(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the maximum input voltage limit.
 
@@ -297,12 +312,14 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x0F)
 
     @validate_value_range(0, 254)
-    def write_min_input_voltage(self, value: int, reg: bool = False):
+    def write_min_input_voltage(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the minimum input voltage limit.
 
         Args:
-            value (int): Voltage in 0. 1V units (0-254).  Example: 60 = 6.0V.
+            value (int): Voltage in 0.1V units (0-254). Example: 60 = 6.0V.
             reg (bool): If True, use registered write mode.
 
         Returns:
@@ -322,7 +339,9 @@ class _EEPROMRegisters:
         return read_word(self.servo, 0x10)
 
     @validate_value_range(0, 1000)
-    def write_max_torque(self, value: int, reg: bool = False):
+    def write_max_torque(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the maximum torque limit.
 
@@ -347,7 +366,7 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x12)
 
     @validate_value_range(0, 254)
-    def write_phase(self, value: int, reg: bool = False):
+    def write_phase(self, value: int, reg: bool = False) -> dict[str, object] | None:
         """
         Set the phase register (special function).
 
@@ -371,7 +390,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x13)
 
     @validate_value_range(0, 254)
-    def write_uninstallation_conditions(self, value: int, reg: bool = False):
+    def write_uninstallation_conditions(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the uninstallation conditions (protection settings).
 
@@ -395,7 +416,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x14)
 
     @validate_value_range(0, 254)
-    def write_led_alarm_conditions(self, value: int, reg: bool = False):
+    def write_led_alarm_conditions(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the LED alarm conditions.
 
@@ -418,7 +441,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x15)
 
     @validate_value_range(0, 254)
-    def write_position_p(self, value: int, reg: bool = False):
+    def write_position_p(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the position control loop P (proportional) coefficient.
 
@@ -441,7 +466,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x16)
 
     @validate_value_range(0, 254)
-    def write_position_d(self, value: int, reg: bool = False):
+    def write_position_d(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the position control loop D (differential) coefficient.
 
@@ -464,7 +491,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x17)
 
     @validate_value_range(0, 254)
-    def write_position_i(self, value: int, reg: bool = False):
+    def write_position_i(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the position control loop I (integral) coefficient.
 
@@ -488,7 +517,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x18)
 
     @validate_value_range(0, 254)
-    def write_min_starting_force(self, value: int, reg: bool = False):
+    def write_min_starting_force(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the minimum starting force.
 
@@ -512,7 +543,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x19)
 
     @validate_value_range(0, 254)
-    def write_points_limit(self, value: int, reg: bool = False):
+    def write_points_limit(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the points limit.
 
@@ -537,7 +570,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x1A)
 
     @validate_value_range(0, 32)
-    def write_cw_insensitive_area(self, value: int, reg: bool = False):
+    def write_cw_insensitive_area(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the clockwise insensitive area (deadzone).
 
@@ -555,13 +590,15 @@ class _EEPROMRegisters:
         Read the counterclockwise insensitive area (deadzone).
 
         Returns:
-            int: Deadzone in steps (0-32). Smallest unit is minimum resolution angle.
+            int: Deadzone in steps (0-32).  Smallest unit is minimum resolution angle.
                  Returns None if read fails.
         """
         return read_byte(self.servo, 0x1B)
 
     @validate_value_range(0, 32)
-    def write_ccw_insensitive_area(self, value: int, reg: bool = False):
+    def write_ccw_insensitive_area(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the counterclockwise insensitive area (deadzone).
 
@@ -585,7 +622,9 @@ class _EEPROMRegisters:
         return read_word(self.servo, 0x1C)
 
     @validate_value_range(0, 511)
-    def write_protective_current(self, value: int, reg: bool = False):
+    def write_protective_current(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the protective current limit.
 
@@ -609,7 +648,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x1E)
 
     @validate_value_range(1, 3)
-    def write_angular_resolution(self, value: int, reg: bool = False):
+    def write_angular_resolution(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the angular resolution.
 
@@ -637,7 +678,9 @@ class _EEPROMRegisters:
         return raw
 
     @validate_value_range(-2047, 2047)
-    def write_position_correction(self, value: int, reg: bool = False):
+    def write_position_correction(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the position correction offset.
 
@@ -671,7 +714,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x21)
 
     @validate_value_range(0, 3)
-    def write_operating_mode(self, value: int, reg: bool = False):
+    def write_operating_mode(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the operating mode.
 
@@ -699,7 +744,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x22)
 
     @validate_value_range(0, 100)
-    def write_protective_torque(self, value: int, reg: bool = False):
+    def write_protective_torque(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the protective torque.
 
@@ -723,7 +770,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x23)
 
     @validate_value_range(0, 254)
-    def write_protection_time(self, value: int, reg: bool = False):
+    def write_protection_time(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the protection time.
 
@@ -741,13 +790,15 @@ class _EEPROMRegisters:
         Read the overload torque threshold.
 
         Returns:
-            int: Torque in 1. 0% units (0-100).  Max torque threshold for
+            int: Torque in 1.0% units (0-100). Max torque threshold for
                  overload protection. Returns None if read fails.
         """
         return read_byte(self.servo, 0x24)
 
     @validate_value_range(0, 100)
-    def write_overload_torque(self, value: int, reg: bool = False):
+    def write_overload_torque(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the overload torque threshold.
 
@@ -771,7 +822,7 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x25)
 
     @validate_value_range(0, 254)
-    def write_speed_p(self, value: int, reg: bool = False):
+    def write_speed_p(self, value: int, reg: bool = False) -> dict[str, object] | None:
         """
         Set the speed control loop P (proportional) coefficient.
 
@@ -795,7 +846,9 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x26)
 
     @validate_value_range(0, 254)
-    def write_overcurrent_protection_time(self, value: int, reg: bool = False):
+    def write_overcurrent_protection_time(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the overcurrent protection time.
 
@@ -819,7 +872,7 @@ class _EEPROMRegisters:
         return read_byte(self.servo, 0x27)
 
     @validate_value_range(0, 254)
-    def write_speed_i(self, value: int, reg: bool = False):
+    def write_speed_i(self, value: int, reg: bool = False) -> dict[str, object] | None:
         """
         Set the speed control loop I (integral) coefficient.
 
@@ -834,7 +887,7 @@ class _EEPROMRegisters:
 
 
 class SRAMRegisters:
-    def __init__(self, servo: "Servo"):
+    def __init__(self, servo: "Servo") -> None:
         self.servo = servo
 
     def read_torque_switch(self) -> Optional[int]:
@@ -849,7 +902,9 @@ class SRAMRegisters:
         """
         return read_byte(self.servo, 0x28)
 
-    def write_torque_switch(self, value: int, reg: bool = False):
+    def write_torque_switch(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the torque switch state.
 
@@ -862,7 +917,7 @@ class SRAMRegisters:
         """
         return write_byte(self.servo, 0x28, value, reg)
 
-    def torque_enable(self, reg: bool = False):
+    def torque_enable(self, reg: bool = False) -> dict[str, object] | None:
         """
         Enable servo torque (motor power on).
 
@@ -874,7 +929,7 @@ class SRAMRegisters:
         """
         return self.write_torque_switch(1, reg=reg)
 
-    def torque_disable(self, reg: bool = False):
+    def torque_disable(self, reg: bool = False) -> dict[str, object] | None:
         """
         Disable servo torque (motor power off, free-spinning).
 
@@ -886,7 +941,7 @@ class SRAMRegisters:
         """
         return self.write_torque_switch(0, reg=reg)
 
-    def correct_position_to_2048(self, reg: bool = False):
+    def correct_position_to_2048(self, reg: bool = False) -> dict[str, object] | None:
         """
         Correct the current position to 2048 (mid-point calibration).
 
@@ -910,7 +965,9 @@ class SRAMRegisters:
         return read_byte(self.servo, 0x29)
 
     @validate_value_range(0, 254)
-    def write_acceleration(self, value: int, reg: bool = False):
+    def write_acceleration(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the acceleration/deceleration.
 
@@ -924,7 +981,7 @@ class SRAMRegisters:
         """
         return write_byte(self.servo, 0x29, value, reg)
 
-    def sync_write_acceleration(self, servo_data: dict[int, int]):
+    def sync_write_acceleration(self, servo_data: dict[int, int]) -> None:
         """
         SYNC WRITE acceleration to multiple servos.
 
@@ -935,15 +992,13 @@ class SRAMRegisters:
             None (broadcast operation, no response)
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_write_acceleration can only be used with broadcast servo (ID 254)."
             )
-        formatted_data = {}
+        formatted_data: dict[int, list[int]] = {}
         for servo_id, value in servo_data.items():
             formatted_data[servo_id] = [value & 0xFF]
-        return self.servo._sync_write(0x29, 1, formatted_data)
+        return self.servo._sync_write(0x29, 1, formatted_data)  # type: ignore
 
     def read_target_location(self) -> Optional[int]:
         """
@@ -957,7 +1012,9 @@ class SRAMRegisters:
         return read_word(self.servo, 0x2A, signed=True)
 
     @validate_value_range(-32766, 32766)
-    def write_target_location(self, value: int, reg: bool = False):
+    def write_target_location(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the target position (absolute position control).
 
@@ -970,7 +1027,7 @@ class SRAMRegisters:
         """
         return write_word(self.servo, 0x2A, value, signed=True, reg=reg)
 
-    def sync_write_target_location(self, servo_data: dict[int, int]):
+    def sync_write_target_location(self, servo_data: dict[int, int]) -> None:
         """
         SYNC WRITE target position to multiple servos.
 
@@ -981,16 +1038,14 @@ class SRAMRegisters:
             None (broadcast operation, no response)
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_write_target_location can only be used with broadcast servo (ID 254)."
             )
-        formatted_data = {}
+        formatted_data: dict[int, list[int]] = {}
         for servo_id, value in servo_data.items():
             low, high = encode_signed_word(value)
             formatted_data[servo_id] = [low, high]
-        return self.servo._sync_write(0x2A, 2, formatted_data)
+        return self.servo._sync_write(0x2A, 2, formatted_data)  # type: ignore
 
     def read_runtime(self) -> Optional[int]:
         """
@@ -1004,7 +1059,7 @@ class SRAMRegisters:
         return read_word(self.servo, 0x2C)
 
     @validate_value_range(0, 2047)
-    def write_runtime(self, value: int, reg: bool = False):
+    def write_runtime(self, value: int, reg: bool = False) -> dict[str, object] | None:
         """
         Set the runtime (PWM open-loop mode).
 
@@ -1029,7 +1084,9 @@ class SRAMRegisters:
         return read_word(self.servo, 0x2E, signed=True)
 
     @validate_value_range(-32766, 32766)
-    def write_running_speed(self, value: int, reg: bool = False):
+    def write_running_speed(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the running speed (constant speed mode).
 
@@ -1043,7 +1100,7 @@ class SRAMRegisters:
         """
         return write_word(self.servo, 0x2E, value, signed=True, reg=reg)
 
-    def sync_write_running_speed(self, servo_data: dict[int, int]):
+    def sync_write_running_speed(self, servo_data: dict[int, int]) -> None:
         """
         SYNC WRITE running speed to multiple servos.
 
@@ -1054,30 +1111,30 @@ class SRAMRegisters:
             None (broadcast operation, no response)
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_write_running_speed can only be used with broadcast servo (ID 254)."
             )
-        formatted_data = {}
+        formatted_data: dict[int, list[int]] = {}
         for servo_id, value in servo_data.items():
             low, high = encode_signed_word(value)
             formatted_data[servo_id] = [low, high]
-        return self.servo._sync_write(0x2E, 2, formatted_data)
+        return self.servo._sync_write(0x2E, 2, formatted_data)  # type: ignore
 
     def read_torque_limit(self) -> Optional[int]:
         """
         Read the current torque limit.
 
         Returns:
-            int: Torque limit in 0.1% units (0-1000).  Example: 500 = 50. 0%.
+            int: Torque limit in 0.1% units (0-1000).  Example: 500 = 50.0%.
                  Initial value is set from max_torque (EEPROM) on power-up.
             Returns None if read fails.
         """
         return read_word(self.servo, 0x30)
 
     @validate_value_range(0, 1000)
-    def write_torque_limit(self, value: int, reg: bool = False):
+    def write_torque_limit(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the torque limit.
 
@@ -1090,7 +1147,7 @@ class SRAMRegisters:
         """
         return write_word(self.servo, 0x30, value, reg=reg)
 
-    def sync_write_torque_limit(self, servo_data: dict[int, int]):
+    def sync_write_torque_limit(self, servo_data: dict[int, int]) -> None:
         """
         SYNC WRITE torque limit to multiple servos.
 
@@ -1101,16 +1158,14 @@ class SRAMRegisters:
             None (broadcast operation, no response)
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_write_torque_limit can only be used with broadcast servo (ID 254)."
             )
-        formatted_data = {}
+        formatted_data: dict[int, list[int]] = {}
         for servo_id, value in servo_data.items():
             low, high = encode_unsigned_word(value)
             formatted_data[servo_id] = [low, high]
-        return self.servo._sync_write(0x30, 2, formatted_data)
+        self.servo._sync_write(0x30, 2, formatted_data)  # type: ignore
 
     def read_lock_symbol(self) -> Optional[int]:
         """
@@ -1124,7 +1179,9 @@ class SRAMRegisters:
         return read_byte(self.servo, 0x37)
 
     @validate_value_range(0, 1)
-    def write_lock_symbol(self, value: int, reg: bool = False):
+    def write_lock_symbol(
+        self, value: int, reg: bool = False
+    ) -> dict[str, object] | None:
         """
         Set the EEPROM write lock status.
 
@@ -1137,7 +1194,7 @@ class SRAMRegisters:
         """
         return write_byte(self.servo, 0x37, value, reg)
 
-    def lock(self, reg: bool = False):
+    def lock(self, reg: bool = False) -> dict[str, object] | None:
         """
         Enable EEPROM write lock (prevent saving settings to EEPROM).
 
@@ -1149,7 +1206,7 @@ class SRAMRegisters:
         """
         return self.write_lock_symbol(0, reg=reg)
 
-    def unlock(self, reg: bool = False):
+    def unlock(self, reg: bool = False) -> dict[str, object] | None:
         """
         Disable EEPROM write lock (allow saving settings to EEPROM).
 
@@ -1170,7 +1227,9 @@ class SRAMRegisters:
         """
         return read_word(self.servo, 0x38)
 
-    def sync_read_current_location(self, servo_ids: list[int]):
+    def sync_read_current_location(
+        self, servo_ids: list[int]
+    ) -> dict[int, Optional[int]]:
         """
         SYNC READ current position from multiple servos.
 
@@ -1181,17 +1240,20 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current position
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_read_current_location can only be used with broadcast servo (ID 254)."
             )
-        responses = self.servo._sync_read(0x38, 2, servo_ids)
-        results = {}
+        responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
+            0x38, 2, servo_ids
+        )
+        results: dict[int, int | None] = {}
         for servo_id, response in responses.items():
-            if response and response.get("parameters"):
-                data = response["parameters"]
-                raw = data[0] | (data[1] << 8)
+            if response and isinstance(response, dict) and response.get("parameters"):
+                data: list[int] | bytes = response["parameters"]
+                if isinstance(data, (bytes, bytearray)):
+                    raw = data[0] | (data[1] << 8)
+                else:
+                    raw = data[0] | (data[1] << 8)
                 results[servo_id] = raw
             else:
                 results[servo_id] = None
@@ -1202,11 +1264,11 @@ class SRAMRegisters:
         Read the current speed (feedback).
 
         Returns:
-            int: Current speed in steps/s. Returns None if read fails.
+            int: Current speed in steps/s.    Returns None if read fails.
         """
         return read_word(self.servo, 0x3A)
 
-    def sync_read_current_speed(self, servo_ids: list[int]):
+    def sync_read_current_speed(self, servo_ids: list[int]) -> dict[int, Optional[int]]:
         """
         SYNC READ current speed from multiple servos.
 
@@ -1217,17 +1279,20 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current speed
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_read_current_speed can only be used with broadcast servo (ID 254)."
             )
-        responses = self.servo._sync_read(0x3A, 2, servo_ids)
-        results = {}
+        responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
+            0x3A, 2, servo_ids
+        )
+        results: dict[int, int | None] = {}
         for servo_id, response in responses.items():
-            if response and response.get("parameters"):
-                data = response["parameters"]
-                raw = data[0] | (data[1] << 8)
+            if response and isinstance(response, dict) and response.get("parameters"):
+                data: list[int] | bytes = response["parameters"]
+                if isinstance(data, (bytes, bytearray)):
+                    raw = data[0] | (data[1] << 8)
+                else:
+                    raw = data[0] | (data[1] << 8)
                 results[servo_id] = raw
             else:
                 results[servo_id] = None
@@ -1243,7 +1308,7 @@ class SRAMRegisters:
         """
         return read_word(self.servo, 0x3C)
 
-    def sync_read_current_load(self, servo_ids: list[int]):
+    def sync_read_current_load(self, servo_ids: list[int]) -> dict[int, Optional[int]]:
         """
         SYNC READ current load from multiple servos.
 
@@ -1254,13 +1319,13 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current load
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_read_current_load can only be used with broadcast servo (ID 254)."
             )
-        responses = self.servo._sync_read(0x3C, 2, servo_ids)
-        results = {}
+        responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
+            0x3C, 2, servo_ids
+        )
+        results: dict[int, Optional[int]] = {}
         for servo_id, response in responses.items():
             if response and response.get("parameters"):
                 data = response["parameters"]
@@ -1275,12 +1340,14 @@ class SRAMRegisters:
         Read the current operating voltage.
 
         Returns:
-            int: Voltage in 0.1V units.  Example: 120 = 12.0V.
+            int: Voltage in 0.1V units. Example: 120 = 12.0V.
                  Returns None if read fails.
         """
         return read_byte(self.servo, 0x3E)
 
-    def sync_read_current_voltage(self, servo_ids: list[int]):
+    def sync_read_current_voltage(
+        self, servo_ids: list[int]
+    ) -> dict[int, Optional[int]]:
         """
         SYNC READ current voltage from multiple servos.
 
@@ -1291,13 +1358,13 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current voltage
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_read_current_voltage can only be used with broadcast servo (ID 254)."
             )
-        responses = self.servo._sync_read(0x3E, 1, servo_ids)
-        results = {}
+        responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
+            0x3E, 1, servo_ids
+        )
+        results: dict[int, Optional[int]] = {}
         for servo_id, response in responses.items():
             if response and response.get("parameters"):
                 data = response["parameters"]
@@ -1315,7 +1382,9 @@ class SRAMRegisters:
         """
         return read_byte(self.servo, 0x3F)
 
-    def sync_read_current_temperature(self, servo_ids: list[int]):
+    def sync_read_current_temperature(
+        self, servo_ids: list[int]
+    ) -> dict[int, Optional[int]]:
         """
         SYNC READ current temperature from multiple servos.
 
@@ -1326,13 +1395,13 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current temperature
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_read_current_temperature can only be used with broadcast servo (ID 254)."
             )
-        responses = self.servo._sync_read(0x3F, 1, servo_ids)
-        results = {}
+        responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
+            0x3F, 1, servo_ids
+        )
+        results: dict[int, Optional[int]] = {}
         for servo_id, response in responses.items():
             if response and response.get("parameters"):
                 data = response["parameters"]
@@ -1356,12 +1425,12 @@ class SRAMRegisters:
         Read the servo status (error flags).
 
         Returns:
-            int: Status bitmask.  Bit = 1 indicates error, 0 = no error.
+            int: Status bitmask. Bit = 1 indicates error, 0 = no error.
                  Returns None if read fails.
         """
         return read_byte(self.servo, 0x41)
 
-    def sync_read_servo_status(self, servo_ids: list[int]):
+    def sync_read_servo_status(self, servo_ids: list[int]) -> dict[int, Optional[int]]:
         """
         SYNC READ servo status from multiple servos.
 
@@ -1372,13 +1441,13 @@ class SRAMRegisters:
             Dictionary mapping servo_id to servo status
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_read_servo_status can only be used with broadcast servo (ID 254)."
             )
-        responses = self.servo._sync_read(0x41, 1, servo_ids)
-        results = {}
+        responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
+            0x41, 1, servo_ids
+        )
+        results: dict[int, Optional[int]] = {}
         for servo_id, response in responses.items():
             if response and response.get("parameters"):
                 data = response["parameters"]
@@ -1417,7 +1486,9 @@ class SRAMRegisters:
         """
         return read_word(self.servo, 0x45)
 
-    def sync_read_current_current(self, servo_ids: list[int]):
+    def sync_read_current_current(
+        self, servo_ids: list[int]
+    ) -> dict[int, Optional[int]]:
         """
         SYNC READ current draw from multiple servos.
 
@@ -1428,13 +1499,13 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current draw
         """
         if self.servo.id != 254:
-            from .errors import ST3215Error
-
             raise ST3215Error(
                 "sync_read_current_current can only be used with broadcast servo (ID 254)."
             )
-        responses = self.servo._sync_read(0x45, 2, servo_ids)
-        results = {}
+        responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
+            0x45, 2, servo_ids
+        )
+        results: dict[int, Optional[int]] = {}
         for servo_id, response in responses.items():
             if response and response.get("parameters"):
                 data = response["parameters"]

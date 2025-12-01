@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Sequence, Any, cast
 
 if TYPE_CHECKING:
     from .st3215 import ST3215
@@ -9,7 +9,7 @@ from .registers import _EEPROMRegisters, SRAMRegisters
 
 
 class Servo:
-    def __init__(self, controller: "ST3215", servo_id: int):
+    def __init__(self, controller: "ST3215", servo_id: int) -> None:
         self.controller = controller
         self.id = servo_id
         self.logger = controller.logger
@@ -18,14 +18,14 @@ class Servo:
 
     def send(
         self, instruction: int | Instruction, parameters: Sequence[int] | None = None
-    ):
+    ) -> dict[str, object] | None:
         self.logger.debug(
             f"Servo {self.id}: sending instruction {instruction} with parameters {parameters}"
         )
         packet = self.controller.send_instruction(self.id, instruction, parameters)
         response = self.controller.read_response(packet)
         if response:
-            parsed = self.controller.parse_response(response)
+            parsed: dict[str, object] | None = self.controller.parse_response(response)
             self.logger.debug(f"Servo {self.id}: received response {parsed}")
             return parsed
         self.logger.warning(
@@ -33,42 +33,45 @@ class Servo:
         )
         return None
 
-    def ping(self):
+    def ping(self) -> dict[str, object] | None:
         """Send PING command to the servo to check if it is responsive."""
-        return self.controller.ping(self.id)
+        return cast(dict[str, object] | None, self.controller.ping(self.id))
 
-    def action(self):
+    def action(self) -> dict[str, object] | None:
         """Send ACTION command to the servo to execute all registered commands."""
         self.logger.debug(f"Sending ACTION command to servo {self.id}")
         return self.send(Instruction.ACTION)
 
-    def reset(self):
+    def reset(self) -> dict[str, object] | None:
         """Send RESET command to the servo to reset it to factory defaults."""
         self.logger.debug(f"Sending RESET command to servo {self.id}")
         return self.send(Instruction.RESET)
 
-    def _read_memory(self, address: int, length: int = 1):
+    def _read_memory(self, address: int, length: int = 1) -> int | None:
         self.logger.debug(
             f"Reading {length} bytes from address {address:#02x} on servo {self.id}"
         )
         response = self.send(Instruction.READ, [address, length])
-        if response and response["parameters"]:
+        if response and response.get("parameters"):
             data = response["parameters"]
-            if length == 1:
-                return data[0]
-            value = 0
-            for i, byte in enumerate(data):
-                value |= byte << (8 * i)
-            self.logger.debug(
-                f"Read value {value} (0x{value:04X}) from servo {self.id}"
-            )
-            return value
+            if isinstance(data, (bytes, bytearray)):
+                if length == 1:
+                    return data[0]
+                value = 0
+                for i, byte in enumerate(data):
+                    value |= byte << (8 * i)
+                self.logger.debug(
+                    f"Read value {value} (0x{value:04X}) from servo {self.id}"
+                )
+                return value
         self.logger.warning(
             f"Failed to read memory from servo {self.id} at address {address:#02x}"
         )
         return None
 
-    def _write_memory(self, address: int, values: Sequence[int]):
+    def _write_memory(
+        self, address: int, values: Sequence[int]
+    ) -> dict[str, object] | None:
         if not isinstance(values, Sequence):
             values = [values]
         self.logger.debug(
@@ -76,7 +79,9 @@ class Servo:
         )
         return self.send(Instruction.WRITE, [address, *values])
 
-    def _reg_write_memory(self, address: int, values: Sequence[int]):
+    def _reg_write_memory(
+        self, address: int, values: Sequence[int]
+    ) -> dict[str, object] | None:
         if not isinstance(values, Sequence):
             values = [values]
         self.logger.debug(
@@ -86,8 +91,10 @@ class Servo:
 
     def _sync_write(
         self, address: int, data_length: int, servo_data: dict[int, Sequence[int]]
-    ):
+    ) -> None:
         return self.controller._sync_write(address, data_length, servo_data)
 
-    def _sync_read(self, address: int, data_length: int, servo_ids: Sequence[int]):
+    def _sync_read(
+        self, address: int, data_length: int, servo_ids: Sequence[int]
+    ) -> dict[int, dict[str, Any] | None]:
         return self.controller._sync_read(address, data_length, servo_ids)
