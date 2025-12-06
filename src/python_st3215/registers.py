@@ -1157,7 +1157,7 @@ class SRAMRegisters:
         Returns:
             Response dict or None
         """
-        return self.write_lock_symbol(0, reg=reg)
+        return self.write_lock_symbol(1, reg=reg)
 
     def unlock(self, reg: bool = False):
         """
@@ -1169,7 +1169,7 @@ class SRAMRegisters:
         Returns:
             Response dict or None
         """
-        return self.write_lock_symbol(1, reg=reg)
+        return self.write_lock_symbol(0, reg=reg)
 
     @read_method(0x38, size=2)
     def read_current_location(self) -> Optional[int]:
