@@ -1,6 +1,6 @@
 [project]
 name = "python-st3215"
-version = "1.0.0"
+dynamic = ["version"]
 authors = [
   { name="Alessio D'Ambrosio", email="alessio@alessiodam.dev" },
 ]
@@ -26,6 +26,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
 ]
@@ -39,3 +41,12 @@ Issues = "https://github.com/alessiodam/python-st3215/issues"
 [build-system]
 requires = ["hatchling >= 1.27"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/python_st3215/__init__.py"
+
+[tool.mypy]
+python_version = "3.13"
+packages = ["python_st3215"]
+exclude = ["examples"]
+strict = true

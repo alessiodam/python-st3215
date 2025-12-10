@@ -6,7 +6,7 @@ from .instructions import Instruction
 from .errors import ServoNotRespondingError, InvalidInstructionError
 from .decorators import validate_servo_id
 
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Literal
 
 
 class ST3215:
@@ -19,15 +19,15 @@ class ST3215:
     logger.addHandler(_console_handler)
 
     @classmethod
-    def set_log_level(cls, level: int):
+    def set_log_level(cls, level: int) -> None:
         cls.logger.setLevel(level)
 
     @classmethod
-    def disable_logging(cls):
+    def disable_logging(cls) -> None:
         cls.logger.disabled = True
 
     @classmethod
-    def enable_logging(cls):
+    def enable_logging(cls) -> None:
         cls.logger.disabled = False
 
     def __init__(
@@ -35,7 +35,7 @@ class ST3215:
         port: str,
         baudrate: int = 1000000,
         read_timeout: float = 0.002,
-    ):
+    ) -> None:
         """
         Initialize the ST3215 controller with the given serial port settings.
         Args:
@@ -50,7 +50,7 @@ class ST3215:
         self.logger.debug(f"Serial port opened at {baudrate} baud.")
         self.broadcast = Servo(self, 254)
 
-    def close(self):
+    def close(self) -> None:
         if self.ser.is_open:
             self.ser.close()
             self.logger.info("Serial port closed.")
@@ -102,7 +102,7 @@ class ST3215:
             return raw_data[len(sent_packet) :]
         return raw_data
 
-    def parse_response(self, data: bytes):
+    def parse_response(self, data: bytes) -> Optional[dict[str, object]]:
         self.logger.debug(f"Parsing response data: {list(data)}")
         if len(data) < 6:
             self.logger.warning("Response too short to parse.")
@@ -116,7 +116,7 @@ class ST3215:
         checksum_base = servo_id + length + error + sum(parameters)
         calculated_checksum = (~checksum_base) & 0xFF
         valid_checksum = calculated_checksum == received_checksum
-        parsed = {
+        parsed: dict[str, object] = {
             "header": header,
             "id": servo_id,
             "length": length,
@@ -130,7 +130,7 @@ class ST3215:
         return parsed
 
     @validate_servo_id
-    def ping(self, servo_id: int):
+    def ping(self, servo_id: int) -> Optional[dict[str, object]]:
         """
         Send PING command to the servo to check if it is responsive.
         Returns:
@@ -145,7 +145,7 @@ class ST3215:
         return None
 
     @validate_servo_id
-    def wrap_servo(self, servo_id: int):
+    def wrap_servo(self, servo_id: int) -> Servo:
         """
         Create a Servo instance for the given servo ID after verifying it responds to ping.
         Returns:
@@ -160,7 +160,7 @@ class ST3215:
             )
         return Servo(self, servo_id)
 
-    def list_servos(self):
+    def list_servos(self) -> list[int]:
         """
         Scan for connected servos by pinging all possible IDs (0-253).
         Returns:
@@ -177,7 +177,7 @@ class ST3215:
 
     def _sync_write(
         self, address: int, data_length: int, servo_data: dict[int, Sequence[int]]
-    ):
+    ) -> None:
         self.logger.debug(
             f"SYNC WRITE to address {address:#02x} for {len(servo_data)} servos"
         )
@@ -192,16 +192,17 @@ class ST3215:
             parameters.extend(data)
         self.send_instruction(0xFE, Instruction.SYNC_WRITE, parameters)
         self.logger.debug(f"SYNC WRITE command sent, no response expected")
-        return None
 
-    def _sync_read(self, address: int, data_length: int, servo_ids: Sequence[int]):
+    def _sync_read(
+        self, address: int, data_length: int, servo_ids: Sequence[int]
+    ) -> dict[int, Optional[dict[str, object]]]:
         self.logger.debug(
             f"SYNC READ from address {address:#02x}, length {data_length} "
             f"for servos {servo_ids}"
         )
         parameters = [address, data_length, *servo_ids]
         packet = self.send_instruction(0xFE, Instruction.SYNC_READ, parameters)
-        responses = {}
+        responses: dict[int, Optional[dict[str, object]]] = {}
         for servo_id in servo_ids:
             response = self.read_response(packet)
             if response:
@@ -216,3 +217,15 @@ class ST3215:
                 )
                 responses[servo_id] = None
         return responses
+
+    def __enter__(self) -> "ST3215":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: object,
+    ) -> Literal[False]:
+        self.close()
+        return False
