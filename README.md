@@ -58,9 +58,10 @@ Hover over classes and functions in your editor to see type hints, parameter des
 
 ## Hardware Compatibility
 
-| Brand     | SKU   | Product                        |
-|-----------|-------|--------------------------------|
-| Waveshare | 22414 | ST3215 Series Serial Bus Servo |
+| Brand     | SKU   | Product                                                                      |
+|-----------|-------|------------------------------------------------------------------------------|
+| Waveshare | 22414 | [ST3215 Series Serial Bus Servo](https://www.waveshare.com/st3215-servo.htm) |
+|           |       | USB to RS485 Serial Converter                                                |
 
 ## Memory Table
 
