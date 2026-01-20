@@ -1,15 +1,17 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Any
+
+from typing import TYPE_CHECKING, Any, Optional
+
 from .errors import ST3215Error
 
 if TYPE_CHECKING:
     from .servo import Servo
 
 from .decorators import (
-    validate_value_range,
-    encode_signed_word,
     decode_signed_word,
+    encode_signed_word,
     encode_unsigned_word,
+    validate_value_range,
 )
 
 
@@ -48,7 +50,7 @@ def write_word(
     return write_fn(address, [low, high])
 
 
-class _EEPROMRegisters:
+class EEPROMRegisters:
     def __init__(self, servo: "Servo") -> None:
         self.servo = servo
 

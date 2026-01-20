@@ -20,24 +20,6 @@ def validate_servo_id(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-def validate_broadcast_only(func: Callable[..., Any]) -> Callable[..., Any]:
-    """
-    Decorator to ensure operation is only used with broadcast servo (ID 254).
-    """
-
-    @wraps(func)
-    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-        if self.servo.id != 254:
-            from .errors import ST3215Error
-
-            raise ST3215Error(
-                f"{func.__name__} can only be used with broadcast servo (ID 254)."
-            )
-        return func(self, *args, **kwargs)
-
-    return wrapper
-
-
 def validate_value_range(
     min_val: int, max_val: int
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:

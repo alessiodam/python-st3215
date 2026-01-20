@@ -1,11 +1,12 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Sequence, Any, cast
+
+from typing import TYPE_CHECKING, Any, Sequence, cast
 
 if TYPE_CHECKING:
     from .st3215 import ST3215
 
 from .instructions import Instruction
-from .registers import _EEPROMRegisters, SRAMRegisters
+from .registers import EEPROMRegisters, SRAMRegisters
 
 
 class Servo:
@@ -13,7 +14,7 @@ class Servo:
         self.controller = controller
         self.id = servo_id
         self.logger = controller.logger
-        self.eeprom = _EEPROMRegisters(self)
+        self.eeprom = EEPROMRegisters(self)
         self.sram = SRAMRegisters(self)
 
     def send(
