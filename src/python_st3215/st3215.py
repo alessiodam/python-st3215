@@ -447,10 +447,12 @@ class ST3215:
         )
         parameters = [address, data_length, *servo_ids]
         packet = self.send_instruction(0xFE, Instruction.SYNC_READ, parameters)
-        responses: dict[int, Optional[dict[str, object]]] = {}
+        responses: dict[int, Optional[dict[str, object]]] = {
+                servo_id: None for servo_id in servo_ids
+        }
         rx = self.read_response(packet)
         if rx is None:
-            return None
+            return responses
         b = 0
         while b+3 < len(rx) and rx[b]==0xFF and rx[b+1]==0xFF:
             servo_id = rx[b+2]
@@ -462,7 +464,8 @@ class ST3215:
                 )
                 responses[servo_id] = None
                 break
-            responses[servo_id] = self.parse_response(rx[b:b+pkglen])
+            if b+pkglen <= len(rx):
+                responses[servo_id] = self.parse_response(rx[b:b+pkglen])
             b += pkglen
         return responses
 
