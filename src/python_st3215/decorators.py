@@ -12,22 +12,22 @@ def validate_servo_id(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
     def wrapper(self: Any, servo_id: int, *args: Any, **kwargs: Any) -> Any:
         if servo_id == 254:
-            from .errors import ST3215Error
+            from .errors import BroadcastOperationError
 
-            raise ST3215Error(f"Cannot {func.__name__} broadcast servo ID 254.")
+            raise BroadcastOperationError(
+                f"{func.__name__} cannot be used with broadcast ID 254."
+            )
         return func(self, servo_id, *args, **kwargs)
 
     return wrapper
 
 
-def validate_value_range(
-    min_val: int, max_val: int
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def validate_value_range(min_val: int, max_val: int) -> Callable[[F], F]:
     """
     Decorator to validate that a value parameter is within the specified range.
     """
 
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    def decorator(func: F) -> F:
         @wraps(func)
         def wrapper(self: Any, value: int, *args: Any, **kwargs: Any) -> Any:
             if not (min_val <= value <= max_val):
@@ -36,7 +36,7 @@ def validate_value_range(
                 )
             return func(self, value, *args, **kwargs)
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
 

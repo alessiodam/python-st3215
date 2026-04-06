@@ -110,9 +110,9 @@ class ServoStatusError(ST3215Error):
     def __init__(self, servo_id: int, error_code: int, message: str = ""):
         self.servo_id = servo_id
         self.error_code = error_code
-        error_details = None
-        detail_str = ", ".join(error_details) if error_details else "Unknown error"
-        full_message = f"Servo {servo_id} error (code {error_code:#02x}): {detail_str}"
+        full_message = (
+            f"Servo {servo_id} reported error status (code {error_code:#04x})"
+        )
         if message:
-            full_message += f" - {message}"
+            full_message += f": {message}"
         super().__init__(full_message)

@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import logging
 import time
-from typing import Callable, Literal, Optional, Sequence
+from typing import Callable, Literal, Optional, Protocol, Sequence
 
 import serial
 
@@ -17,25 +19,42 @@ from .instructions import Instruction
 from .servo import Servo
 
 
+class _SerialLike(Protocol):
+    """Minimal interface expected of any serial-like object passed to ST3215."""
+
+    timeout: Optional[float]
+    is_open: bool
+
+    def write(self, data: bytes) -> Optional[int]: ...
+    def read(self, size: int) -> bytes: ...
+    def flush(self) -> None: ...
+    def close(self) -> None: ...
+
+
+logging.getLogger("ST3215").addHandler(logging.NullHandler())
+
+
 class ST3215:
     logger = logging.getLogger("ST3215")
-    logger.setLevel(logging.WARN)
-    _console_handler = logging.StreamHandler()
-    _console_handler.setFormatter(
-        logging.Formatter("[%(levelname)s] %(name)s: %(message)s")
-    )
-    logger.addHandler(_console_handler)
 
     @classmethod
     def set_log_level(cls, level: int) -> None:
+        """Set the logging level for the ST3215 logger.
+
+        Args:
+            level (int): A logging level constant such as ``logging.DEBUG``,
+                ``logging.INFO``, ``logging.WARNING``, etc.
+        """
         cls.logger.setLevel(level)
 
     @classmethod
     def disable_logging(cls) -> None:
+        """Disable all ST3215 log output."""
         cls.logger.disabled = True
 
     @classmethod
     def enable_logging(cls) -> None:
+        """Re-enable ST3215 log output after a previous call to :meth:`disable_logging`."""
         cls.logger.disabled = False
 
     def __init__(
@@ -45,7 +64,7 @@ class ST3215:
         read_timeout: float = 0.002,
         retry_count: int = 3,
         retry_delay: float = 0.01,
-        ser: Optional[object] = None,
+        ser: Optional[_SerialLike] = None,
     ) -> None:
         """
         Initialize the ST3215 controller with the given serial port settings.
@@ -56,7 +75,9 @@ class ST3215:
             read_timeout (float): Read timeout in seconds. Default is 0.002.
             retry_count (int): Number of retries for failed communication. Default is 3.
             retry_delay (float): Delay between retries in seconds. Default is 0.01.
-            ser (Optional[object]): Optional existing serial object to use instead of creating a new one.
+            ser (Optional[_SerialLike]): Optional existing serial-like object to use instead
+                of opening a new port. Must expose ``read``, ``write``, ``flush``, ``close``,
+                ``is_open``, and ``timeout``.
 
         Raises:
             ValueError: If neither port nor ser is provided.
@@ -76,10 +97,8 @@ class ST3215:
 
         try:
             if ser is not None:
-                self.ser = ser
-                if hasattr(self.ser, "timeout"):
-                    # type: ignore[assignment]
-                    self.ser.timeout = read_timeout
+                self.ser: _SerialLike = ser
+                self.ser.timeout = read_timeout
             else:
                 self.ser = serial.Serial(port, baudrate=baudrate, timeout=read_timeout)
                 self.logger.debug(f"Serial port opened at {baudrate} baud.")
@@ -94,11 +113,9 @@ class ST3215:
 
         Safe to call multiple times.
         """
-        if hasattr(self, "ser"):
-            is_open = getattr(self.ser, "is_open", True)
-            if is_open and hasattr(self.ser, "close"):
-                self.ser.close()
-                self.logger.info("Serial port closed.")
+        if hasattr(self, "ser") and self.ser.is_open:
+            self.ser.close()
+            self.logger.info("Serial port closed.")
 
     def is_connected(self) -> bool:
         """
@@ -107,11 +124,31 @@ class ST3215:
         Returns:
             bool: True if connected, False otherwise.
         """
-        return hasattr(self, "ser") and getattr(self.ser, "is_open", True)
+        return hasattr(self, "ser") and self.ser.is_open
 
     def build_packet(
         self, servo_id: int, instruction: int, parameters: Sequence[int] | None = None
     ) -> bytes:
+        """Construct a raw protocol packet ready to be written to the serial bus.
+
+        The ST3215 packet format is::
+
+            [0xFF, 0xFF, ID, LENGTH, INSTRUCTION, PARAM..., CHECKSUM]
+
+        Checksum = (~(ID + LENGTH + INSTRUCTION + sum(PARAMS))) & 0xFF
+
+        Args:
+            servo_id (int): Target servo ID (0-254, where 254 is broadcast).
+            instruction (int): Instruction byte (must be a valid :class:`Instruction` value).
+            parameters (Sequence[int] | None): Optional parameter bytes to include.
+
+        Returns:
+            bytes: The fully-formed packet.
+
+        Raises:
+            InvalidIDError: If ``servo_id`` is outside 0-254.
+            InvalidInstructionError: If ``instruction`` is not a recognised instruction code.
+        """
         if not 0 <= servo_id <= 254:
             raise InvalidIDError(servo_id)
         if not Instruction.has_value(instruction):
@@ -158,8 +195,7 @@ class ST3215:
 
         try:
             self.ser.write(packet)
-            if hasattr(self.ser, "flush"):
-                self.ser.flush()
+            self.ser.flush()
             return packet
         except serial.SerialException as e:
             self.logger.error(f"Failed to send packet: {e}")
@@ -178,11 +214,10 @@ class ST3215:
         Returns:
             Optional[bytes]: Response data or None if no response.
         """
-        if timeout is not None and hasattr(self.ser, "timeout"):
+        old_timeout: Optional[float] = None
+        if timeout is not None:
             old_timeout = self.ser.timeout
             self.ser.timeout = timeout
-        else:
-            old_timeout = None
 
         try:
             raw_data = self.ser.read(1024)
@@ -197,12 +232,39 @@ class ST3215:
                 return raw_data[len(sent_packet) :]
             return raw_data
         finally:
-            if old_timeout is not None and hasattr(self.ser, "timeout"):
+            if old_timeout is not None:
                 self.ser.timeout = old_timeout
 
     def parse_response(
         self, data: bytes, raise_on_error: bool = False
     ) -> Optional[dict[str, object]]:
+        """
+        Parse a raw response packet received from a servo.
+
+        Returns a dictionary with the following keys:
+
+        - ``header`` (bytes): The two-byte header ``[0xFF, 0xFF]``.
+        - ``id`` (int): Responding servo ID.
+        - ``length`` (int): Packet length field.
+        - ``error`` (int): Error status byte (0 = no error).
+        - ``parameters`` (bytes): Payload bytes, empty if none.
+        - ``received_checksum`` (int): Checksum byte from the packet.
+        - ``calculated_checksum`` (int): Locally-computed checksum.
+        - ``checksum_valid`` (bool): Whether the checksums match.
+
+        Args:
+            data (bytes): Raw bytes received from the servo.
+            raise_on_error (bool): If ``True``, raise :class:`ServoStatusError` when
+                the servo reports a non-zero error status. Default is ``False``.
+
+        Returns:
+            dict | None: Parsed response, or ``None`` if ``data`` is too short to parse.
+
+        Raises:
+            ChecksumError: If the packet checksum does not match.
+            ServoStatusError: If ``raise_on_error`` is ``True`` and the servo error byte
+                is non-zero.
+        """
         self.logger.debug(f"Parsing response data: {list(data)}")
         if len(data) < 6:
             self.logger.warning("Response too short to parse.")

@@ -11,6 +11,17 @@ from .registers import EEPROMRegisters, SRAMRegisters
 
 class Servo:
     def __init__(self, controller: "ST3215", servo_id: int) -> None:
+        """Wrap a single servo for convenient register access.
+
+        Instances are normally obtained via :meth:`ST3215.wrap_servo` rather than
+        constructed directly.  The broadcast pseudo-servo (ID 254) is available as
+        ``controller.broadcast`` and exposes the ``sync_write_*`` / ``sync_read_*``
+        helpers on its ``sram`` attribute.
+
+        Args:
+            controller (ST3215): The parent controller that owns the serial connection.
+            servo_id (int): The servo's bus ID (0-253, or 254 for broadcast).
+        """
         self.controller = controller
         self.id = servo_id
         self.logger = controller.logger
@@ -20,6 +31,19 @@ class Servo:
     def send(
         self, instruction: int | Instruction, parameters: Sequence[int] | None = None
     ) -> dict[str, object] | None:
+        """Send a raw instruction to this servo and return the parsed response.
+
+        This is the low-level building block used by all register helpers.  Prefer
+        the typed methods on :attr:`eeprom` and :attr:`sram` for normal use.
+
+        Args:
+            instruction (int | Instruction): Instruction byte to send.
+            parameters (Sequence[int] | None): Optional parameter bytes.
+
+        Returns:
+            dict | None: Parsed response dict (see :meth:`ST3215.parse_response`),
+            or ``None`` if no response was received.
+        """
         self.logger.debug(
             f"Servo {self.id}: sending instruction {instruction} with parameters {parameters}"
         )
