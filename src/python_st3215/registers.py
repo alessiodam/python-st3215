@@ -1264,7 +1264,7 @@ class SRAMRegisters:
         Returns:
             int: Current speed in steps/s.    Returns None if read fails.
         """
-        return read_word(self.servo, 0x3A)
+        return read_word(self.servo, 0x3A, signed=True)
 
     def sync_read_current_speed(self, servo_ids: list[int]) -> dict[int, Optional[int]]:
         """
@@ -1291,7 +1291,7 @@ class SRAMRegisters:
                     raw = data[0] | (data[1] << 8)
                 else:
                     raw = data[0] | (data[1] << 8)
-                results[servo_id] = raw
+                results[servo_id] = decode_signed_word(raw)
             else:
                 results[servo_id] = None
         return results

@@ -497,20 +497,26 @@ class ST3215:
         )
         parameters = [address, data_length, *servo_ids]
         packet = self.send_instruction(0xFE, Instruction.SYNC_READ, parameters)
-        responses: dict[int, Optional[dict[str, object]]] = {}
-        for servo_id in servo_ids:
-            response = self.read_response(packet)
-            if response:
-                parsed = self.parse_response(response)
-                self.logger.debug(
-                    f"Servo {servo_id}: received SYNC READ response {parsed}"
-                )
-                responses[servo_id] = parsed
-            else:
+        responses: dict[int, Optional[dict[str, object]]] = {
+                servo_id: None for servo_id in servo_ids
+        }
+        rx = self.read_response(packet)
+        if rx is None:
+            return responses
+        b = 0
+        while b+3 < len(rx) and rx[b]==0xFF and rx[b+1]==0xFF:
+            servo_id = rx[b+2]
+            paramlen = rx[b+3]
+            pkglen = paramlen + 4
+            if paramlen != data_length + 2:
                 self.logger.warning(
-                    f"Servo {servo_id}: no response received for SYNC READ"
+                        f"Servo {servo_id}: no valid response for SYNC READ"
                 )
                 responses[servo_id] = None
+                break
+            if b+pkglen <= len(rx):
+                responses[servo_id] = self.parse_response(rx[b:b+pkglen])
+            b += pkglen
         return responses
 
     def __enter__(self) -> "ST3215":

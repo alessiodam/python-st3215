@@ -44,19 +44,19 @@ def validate_value_range(min_val: int, max_val: int) -> Callable[[F], F]:
 def encode_signed_word(value: int) -> tuple[int, int]:
     """
     Encode a signed 16-bit value to low and high bytes.
+    Encoding uses most-significant bit as sign bit.
 
     Args:
-        value: Signed integer (-32768 to 32767)
+        value: Signed integer (-32767 to 32767)
 
     Returns:
         Tuple of (low_byte, high_byte)
     """
+    if value < -32767 or value > 32767:
+        raise ValueError
+    low, high = abs(value) & 0xFF, (abs(value) >> 8) & 0x7F
     if value < 0:
-        raw = 65536 + value
-    else:
-        raw = value
-    low = raw & 0xFF
-    high = (raw >> 8) & 0xFF
+        high |= 0x80
     return low, high
 
 
@@ -65,13 +65,13 @@ def decode_signed_word(raw: int) -> int:
     Decode a 16-bit raw value to signed integer.
 
     Args:
-        raw: Raw 16-bit value (0-65535)
+        raw: Raw 16-bit value (0-65535) with dedicated sign bit.
 
     Returns:
-        Signed integer (-32768 to 32767)
+        Signed integer (-32767 to 32767)
     """
     if raw & 0x8000:
-        return raw - 65536
+        return -(raw & 0x7FFF)
     return raw
 
 
