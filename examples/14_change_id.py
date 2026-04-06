@@ -5,7 +5,6 @@ Change a servo's ID.  USE WITH CAUTION - only one servo should be connected!
 import os
 from python_st3215 import ST3215
 
-
 controller = ST3215(os.environ.get("ST3215_PORT", "/dev/ttyUSB0"))
 
 try:

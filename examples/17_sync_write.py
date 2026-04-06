@@ -5,6 +5,7 @@ This is more efficient than writing to each servo individually.
 
 import os
 import time
+
 from python_st3215 import ST3215
 
 controller = ST3215(os.environ.get("ST3215_PORT", "/dev/ttyUSB0"))

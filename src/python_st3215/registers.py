@@ -1,15 +1,17 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Any
-from .errors import ST3215Error
+
+from typing import TYPE_CHECKING, Any, Optional
+
+from .errors import BroadcastOperationError, ST3215Error
 
 if TYPE_CHECKING:
     from .servo import Servo
 
 from .decorators import (
-    validate_value_range,
-    encode_signed_word,
     decode_signed_word,
+    encode_signed_word,
     encode_unsigned_word,
+    validate_value_range,
 )
 
 
@@ -48,7 +50,7 @@ def write_word(
     return write_fn(address, [low, high])
 
 
-class _EEPROMRegisters:
+class EEPROMRegisters:
     def __init__(self, servo: "Servo") -> None:
         self.servo = servo
 
@@ -992,8 +994,8 @@ class SRAMRegisters:
             None (broadcast operation, no response)
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_write_acceleration can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_write_acceleration can only be called on the broadcast servo (ID 254)."
             )
         formatted_data: dict[int, list[int]] = {}
         for servo_id, value in servo_data.items():
@@ -1038,8 +1040,8 @@ class SRAMRegisters:
             None (broadcast operation, no response)
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_write_target_location can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_write_target_location can only be called on the broadcast servo (ID 254)."
             )
         formatted_data: dict[int, list[int]] = {}
         for servo_id, value in servo_data.items():
@@ -1111,8 +1113,8 @@ class SRAMRegisters:
             None (broadcast operation, no response)
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_write_running_speed can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_write_running_speed can only be called on the broadcast servo (ID 254)."
             )
         formatted_data: dict[int, list[int]] = {}
         for servo_id, value in servo_data.items():
@@ -1158,8 +1160,8 @@ class SRAMRegisters:
             None (broadcast operation, no response)
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_write_torque_limit can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_write_torque_limit can only be called on the broadcast servo (ID 254)."
             )
         formatted_data: dict[int, list[int]] = {}
         for servo_id, value in servo_data.items():
@@ -1240,8 +1242,8 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current position
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_read_current_location can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_read_current_location can only be called on the broadcast servo (ID 254)."
             )
         responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
             0x38, 2, servo_ids
@@ -1249,12 +1251,8 @@ class SRAMRegisters:
         results: dict[int, int | None] = {}
         for servo_id, response in responses.items():
             if response and isinstance(response, dict) and response.get("parameters"):
-                data: list[int] | bytes = response["parameters"]
-                if isinstance(data, (bytes, bytearray)):
-                    raw = data[0] | (data[1] << 8)
-                else:
-                    raw = data[0] | (data[1] << 8)
-                results[servo_id] = raw
+                data: bytes = response["parameters"]
+                results[servo_id] = data[0] | (data[1] << 8)
             else:
                 results[servo_id] = None
         return results
@@ -1266,7 +1264,7 @@ class SRAMRegisters:
         Returns:
             int: Current speed in steps/s.    Returns None if read fails.
         """
-        return read_word(self.servo, 0x3A)
+        return read_word(self.servo, 0x3A, signed=True)
 
     def sync_read_current_speed(self, servo_ids: list[int]) -> dict[int, Optional[int]]:
         """
@@ -1279,8 +1277,8 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current speed
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_read_current_speed can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_read_current_speed can only be called on the broadcast servo (ID 254)."
             )
         responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
             0x3A, 2, servo_ids
@@ -1293,7 +1291,7 @@ class SRAMRegisters:
                     raw = data[0] | (data[1] << 8)
                 else:
                     raw = data[0] | (data[1] << 8)
-                results[servo_id] = raw
+                results[servo_id] = decode_signed_word(raw)
             else:
                 results[servo_id] = None
         return results
@@ -1319,8 +1317,8 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current load
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_read_current_load can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_read_current_load can only be called on the broadcast servo (ID 254)."
             )
         responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
             0x3C, 2, servo_ids
@@ -1358,8 +1356,8 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current voltage
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_read_current_voltage can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_read_current_voltage can only be called on the broadcast servo (ID 254)."
             )
         responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
             0x3E, 1, servo_ids
@@ -1395,8 +1393,8 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current temperature
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_read_current_temperature can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_read_current_temperature can only be called on the broadcast servo (ID 254)."
             )
         responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
             0x3F, 1, servo_ids
@@ -1441,8 +1439,8 @@ class SRAMRegisters:
             Dictionary mapping servo_id to servo status
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_read_servo_status can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_read_servo_status can only be called on the broadcast servo (ID 254)."
             )
         responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
             0x41, 1, servo_ids
@@ -1499,8 +1497,8 @@ class SRAMRegisters:
             Dictionary mapping servo_id to current draw
         """
         if self.servo.id != 254:
-            raise ST3215Error(
-                "sync_read_current_current can only be used with broadcast servo (ID 254)."
+            raise BroadcastOperationError(
+                "sync_read_current_current can only be called on the broadcast servo (ID 254)."
             )
         responses: dict[int, dict[str, Any] | None] = self.servo._sync_read(
             0x45, 2, servo_ids
