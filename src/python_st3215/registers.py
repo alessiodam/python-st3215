@@ -235,7 +235,7 @@ class EEPROMRegisters:
         """
         return read_word(self.servo, 0x0B)
 
-    @validate_value_range(1, 4095)
+    @validate_value_range(0, 4095)
     def write_max_angle_limit(
         self, value: int, reg: bool = False
     ) -> dict[str, object] | None:
