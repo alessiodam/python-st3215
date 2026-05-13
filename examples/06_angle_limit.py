@@ -1,14 +1,18 @@
 """
 Set minimum and maximum angle limits to restrict servo range.
+
+Limits are stored in EEPROM and persist across power cycles.
+The servo will clamp movement to stay within the configured limits.
 """
 
 import os
 import time
+
 from python_st3215 import ST3215
 
-controller = ST3215(os.environ.get("ST3215_PORT", "/dev/ttyUSB0"))
+PORT = os.environ.get("ST3215_PORT", "/dev/ttyUSB0")
 
-try:
+with ST3215(PORT) as controller:
     servo = controller.wrap_servo(1)
 
     print("Setting angle limits: 1500 to 2500")
@@ -33,10 +37,8 @@ try:
     time.sleep(1)
     print(f"Actual position: {servo.sram.read_current_location()}")
 
-    print("\nRestoring full range...")
+    print("\nRestoring full range (0-4095)...")
     servo.eeprom.write_min_angle_limit(0)
     servo.eeprom.write_max_angle_limit(4095)
 
     servo.sram.torque_disable()
-finally:
-    controller.close()

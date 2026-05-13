@@ -444,29 +444,25 @@ class ST3215:
 
         found = []
         total = end_id - start_id + 1
-        old_retry_count = self.retry_count
-        self.retry_count = 1
 
-        try:
-            for i, servo_id in enumerate(range(start_id, end_id + 1)):
-                if progress_callback:
-                    progress_callback(i + 1, total)
-                try:
-                    packet = self.send_instruction(servo_id, Instruction.PING)
-                    response = self.read_response(packet, timeout=timeout)
-                    if response:
-                        parsed = self.parse_response(response)
-                        if parsed and parsed.get("error") == 0:
-                            found.append(servo_id)
-                            self.logger.info(f"Found servo at ID {servo_id}")
-                except (
-                    serial.SerialException,
-                    ChecksumError,
-                    CommunicationTimeoutError,
-                ):
-                    continue
-        finally:
-            self.retry_count = old_retry_count
+        for i, servo_id in enumerate(range(start_id, end_id + 1)):
+            if progress_callback:
+                progress_callback(i + 1, total)
+            try:
+                packet = self.send_instruction(servo_id, Instruction.PING)
+                response = self.read_response(packet, timeout=timeout)
+                if response:
+                    parsed = self.parse_response(response)
+                    if parsed and parsed.get("error") == 0:
+                        found.append(servo_id)
+                        self.logger.info(f"Found servo at ID {servo_id}")
+            except (
+                serial.SerialException,
+                ChecksumError,
+                CommunicationTimeoutError,
+            ):
+                continue
+
         self.logger.info(f"Scan complete. Found {len(found)} servo(s): {found}")
         return found
 
@@ -504,18 +500,22 @@ class ST3215:
         if rx is None:
             return responses
         b = 0
-        while b+3 < len(rx) and rx[b]==0xFF and rx[b+1]==0xFF:
-            servo_id = rx[b+2]
-            paramlen = rx[b+3]
+        while b + 3 < len(rx) and rx[b] == 0xFF and rx[b + 1] == 0xFF:
+            servo_id = rx[b + 2]
+            paramlen = rx[b + 3]
             pkglen = paramlen + 4
             if paramlen != data_length + 2:
                 self.logger.warning(
-                        f"Servo {servo_id}: no valid response for SYNC READ"
+                    f"Servo {servo_id}: unexpected paramlen {paramlen} in SYNC READ, skipping"
                 )
-                responses[servo_id] = None
-                break
-            if b+pkglen <= len(rx):
-                responses[servo_id] = self.parse_response(rx[b:b+pkglen])
+                b += 4
+                continue
+            if b + pkglen <= len(rx):
+                responses[servo_id] = self.parse_response(rx[b : b + pkglen])
+            else:
+                self.logger.warning(
+                    f"Servo {servo_id}: truncated packet in SYNC READ response, dropping"
+                )
             b += pkglen
         return responses
 

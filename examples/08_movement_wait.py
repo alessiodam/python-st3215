@@ -4,11 +4,14 @@ Wait for servo to complete movement before proceeding.
 
 import os
 import time
+
 from python_st3215 import ST3215
 
 
-def wait_for_stop(servo, timeout=5):
-    """Wait until servo stops moving or timeout."""
+def wait_for_stop(servo, timeout=5.0):
+    """Wait until servo stops moving or timeout expires."""
+    # Brief delay so the servo has time to set the moving flag before we poll
+    time.sleep(0.05)
     start_time = time.time()
     while servo.sram.is_moving():
         if time.time() - start_time > timeout:
@@ -18,9 +21,9 @@ def wait_for_stop(servo, timeout=5):
     return True
 
 
-controller = ST3215(os.environ.get("ST3215_PORT", "/dev/ttyUSB0"))
+PORT = os.environ.get("ST3215_PORT", "/dev/ttyUSB0")
 
-try:
+with ST3215(PORT) as controller:
     servo = controller.wrap_servo(1)
     servo.sram.torque_enable()
     servo.sram.write_acceleration(30)
@@ -41,5 +44,3 @@ try:
     print("Arrived!")
 
     servo.sram.torque_disable()
-finally:
-    controller.close()
