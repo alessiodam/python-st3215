@@ -4,11 +4,12 @@ Simple position control - move servo to different positions.
 
 import os
 import time
+
 from python_st3215 import ST3215
 
-controller = ST3215(os.environ.get("ST3215_PORT", "/dev/ttyUSB0"))
+PORT = os.environ.get("ST3215_PORT", "/dev/ttyUSB0")
 
-try:
+with ST3215(PORT) as controller:
     servo = controller.wrap_servo(1)
     servo.sram.torque_enable()
 
@@ -25,5 +26,3 @@ try:
     time.sleep(1)
 
     servo.sram.torque_disable()
-finally:
-    controller.close()

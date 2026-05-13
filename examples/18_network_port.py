@@ -1,16 +1,15 @@
 """
-Scan for all servos on the bus and display their information.
-Supports either a direct serial device (e.g. /dev/ttyUSB0) or a network
-socket URL (e.g. socket://<IP>:<PORT>).
+Connect to an ST3215 controller over a network socket instead of a direct
+serial port. Useful when the servo controller is on a remote machine.
 
 Env vars:
-- ST3215_URL   : full pyserial URL (takes precedence)
-- ST3215_HOST  : IP/hostname for socket connection (default: 100.122.96.71)
-- ST3215_PORT  : TCP port for socket connection (default: 2000)
-- ST3215_DEV   : fallback serial device (default: /dev/ttyUSB0)
+  ST3215_URL      Full pyserial URL (takes precedence over host/port)
+  ST3215_HOST     IP or hostname of the remote machine (default: st3215-host)
+  ST3215_TCP_PORT TCP port on the remote machine (default: 2000)
 
-Run this on the host connected to the ST3215 driver board (make sure you have socat installed and set up udev rules for /dev/ttyACM0):
-    `stty -F /dev/ttyACM0 1000000 raw -echo && socat -d -d TCP4-LISTEN:2000,bind=0.0.0.0,reuseaddr,fork,nodelay FILE:/dev/ttyACM0,b1000000,raw,echo=0`
+On the remote host (requires socat and the servo connected to /dev/ttyACM0):
+  stty -F /dev/ttyACM0 1000000 raw -echo
+  socat TCP4-LISTEN:2000,bind=0.0.0.0,reuseaddr,fork,nodelay FILE:/dev/ttyACM0,b1000000,raw,echo=0
 """
 
 import os
@@ -22,21 +21,23 @@ from python_st3215 import ST3215
 
 url_env = os.environ.get("ST3215_URL")
 host = os.environ.get("ST3215_HOST", "st3215-host")
-port = os.environ.get("ST3215_PORT", "2000")
+# ST3215_TCP_PORT is the TCP port on the remote machine, not the local serial device
+tcp_port = os.environ.get("ST3215_TCP_PORT", "2000")
 
 if url_env:
-    TARGET_URL = url_env
-elif host and port:
-    TARGET_URL = f"socket://{host}:{port}"
+    target_url = url_env
+elif host:
+    target_url = f"socket://{host}:{tcp_port}"
 else:
+    print("Set ST3215_URL or ST3215_HOST to connect.")
     sys.exit(1)
 
-print(f"Connecting to ST3215 via: {TARGET_URL}")
+print(f"Connecting to ST3215 via: {target_url}")
 
-ser = serial.serial_for_url(TARGET_URL, timeout=0.02)
-controller = ST3215(ser=ser, read_timeout=0.02)
+# Network latency is higher than USB, so use a larger timeout
+ser = serial.serial_for_url(target_url, timeout=0.02)
 
-try:
+with ST3215(ser=ser, read_timeout=0.02) as controller:
     print("Scanning for servos...\n")
     servos = controller.list_servos(timeout=0.02)
 
@@ -51,20 +52,20 @@ try:
         for servo_id in servos:
             servo = controller.wrap_servo(servo_id)
 
+            voltage_raw = servo.sram.read_current_voltage()
+            voltage_str = f"{voltage_raw / 10:.1f}V" if voltage_raw is not None else "N/A"
+            mode = servo.eeprom.read_operating_mode()
+
             print(f"\nServo ID: {servo_id}")
             print(
                 f"  Firmware: v{servo.eeprom.read_firmware_major_version()}.{servo.eeprom.read_firmware_minor_version()}"
             )
             print(f"  Position: {servo.sram.read_current_location()}")
             print(f"  Temperature: {servo.sram.read_current_temperature()}°C")
-            print(f"  Voltage: {servo.sram.read_current_voltage() / 10:.1f}V")
+            print(f"  Voltage: {voltage_str}")
             print(
                 f"  Min/Max Angle: {servo.eeprom.read_min_angle_limit()} / {servo.eeprom.read_max_angle_limit()}"
             )
-
-            mode = servo.eeprom.read_operating_mode()
             print(f"  Operating Mode: {mode_names.get(mode, 'Unknown')}")
 
         print("\n" + "=" * 80)
-finally:
-    controller.close()

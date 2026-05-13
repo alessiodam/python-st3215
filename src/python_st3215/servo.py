@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Sequence, cast
+from typing import TYPE_CHECKING, Any, Optional, Sequence, cast
 
 if TYPE_CHECKING:
     from .st3215 import ST3215
@@ -60,7 +60,7 @@ class Servo:
 
     def ping(self) -> dict[str, object] | None:
         """Send PING command to the servo to check if it is responsive."""
-        return cast(dict[str, object] | None, self.controller.ping(self.id))
+        return cast(Optional[dict[str, object]], self.controller.ping(self.id))
 
     def action(self) -> dict[str, object] | None:
         """Send ACTION command to the servo to execute all registered commands."""

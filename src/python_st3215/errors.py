@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 class ST3215Error(Exception):
     """Base exception for all ST3215-related errors."""
 

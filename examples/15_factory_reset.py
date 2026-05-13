@@ -1,33 +1,35 @@
 """
-Example script to reset an ST3215 servo to factory settings.
+Reset an ST3215 servo to factory settings.
+
+After reset the servo reboots briefly. This example waits for it to
+come back online and confirms it responds to a ping.
+
+NOTE: Factory reset restores default ID (1) and baudrate (1,000,000).
 """
 
 import os
 import time
+
 from python_st3215 import ST3215
 
-controller = ST3215(os.environ.get("ST3215_PORT", "/dev/ttyUSB0"))
+PORT = os.environ.get("ST3215_PORT", "/dev/ttyUSB0")
 
-try:
+with ST3215(PORT) as controller:
     servo = controller.wrap_servo(1)
-    servo.sram.torque_enable()
 
-    print("Resetting servo to factory settings...")
+    print("Sending factory reset command...")
     servo.reset()
-    print("Servo has been reset to factory settings.")
+    print("Reset command sent. Waiting for servo to reboot...")
 
-    print("Waiting for servo to come back online...")
-    timeout = 5
+    timeout = 5.0
     start = time.time()
     while time.time() - start < timeout:
         try:
             if servo.ping():
-                print("Servo is back!")
+                print("Servo is back online.")
                 break
         except Exception:
             pass
         time.sleep(0.2)
     else:
-        print("Timeout: Servo did not come back online within 5 seconds.")
-finally:
-    controller.close()
+        print("Timeout: servo did not come back online within 5 seconds.")

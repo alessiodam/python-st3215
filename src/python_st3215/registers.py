@@ -122,11 +122,11 @@ class EEPROMRegisters:
                  0 = 1,000,000 baud
                  1 = 500,000 baud
                  2 = 250,000 baud
-                 3 = 115,200 baud
-                 4 = 57,600 baud
-                 5 = 38,400 baud
-                 6 = 19,200 baud
-                 7 = 9,600 baud
+                 3 = 128,000 baud
+                 4 = 115,200 baud
+                 5 = 76,800 baud
+                 6 = 57,600 baud
+                 7 = 38,400 baud
             Returns None if read fails
         """
         return read_byte(self.servo, 0x06)
@@ -230,7 +230,7 @@ class EEPROMRegisters:
         Read the maximum angle limit.
 
         Returns:
-            int: Maximum position in steps (1-4095), or None if read fails.
+            int: Maximum position in steps (0-4095), or None if read fails.
                  Must be greater than min_angle_limit.
         """
         return read_word(self.servo, 0x0B)
@@ -243,7 +243,7 @@ class EEPROMRegisters:
         Set the maximum angle limit.
 
         Args:
-            value (int): Maximum position in steps (1-4095).
+            value (int): Maximum position in steps (0-4095).
                         Must be greater than min_angle_limit.
             reg (bool): If True, use registered write mode.
 
@@ -919,6 +919,26 @@ class SRAMRegisters:
         """
         return write_byte(self.servo, 0x28, value, reg)
 
+    def sync_write_torque_switch(self, servo_data: dict[int, int]) -> None:
+        """
+        SYNC WRITE torque switch to multiple servos.
+
+        Args:
+            servo_data: Dictionary mapping servo_id to torque switch value
+                        (0 = off, 1 = on, 128 = correct position to 2048).
+
+        Returns:
+            None (broadcast operation, no response)
+        """
+        if self.servo.id != 254:
+            raise BroadcastOperationError(
+                "sync_write_torque_switch can only be called on the broadcast servo (ID 254)."
+            )
+        formatted_data: dict[int, list[int]] = {}
+        for servo_id, value in servo_data.items():
+            formatted_data[servo_id] = [value & 0xFF]
+        return self.servo._sync_write(0x28, 1, formatted_data)  # type: ignore
+
     def torque_enable(self, reg: bool = False) -> dict[str, object] | None:
         """
         Enable servo torque (motor power on).
@@ -1054,7 +1074,7 @@ class SRAMRegisters:
         Read the runtime setting (PWM open-loop mode).
 
         Returns:
-            int: Runtime value (0-1000).  BIT10 indicates direction.
+            int: Runtime value (0-2047).  BIT10 indicates direction.
                  Used for PWM open-loop speed control.
             Returns None if read fails.
         """
@@ -1066,7 +1086,7 @@ class SRAMRegisters:
         Set the runtime (PWM open-loop mode).
 
         Args:
-            value (int): Runtime value (0-1000).  BIT10 indicates direction.
+            value (int): Runtime value (0-2047).  BIT10 indicates direction.
             reg (bool): If True, use registered write mode.
 
         Returns:
@@ -1225,9 +1245,9 @@ class SRAMRegisters:
         Read the current position (feedback).
 
         Returns:
-            int: Current position in steps.  Returns None if read fails.
+            int: Current position in steps (signed).  Returns None if read fails.
         """
-        return read_word(self.servo, 0x38)
+        return read_word(self.servo, 0x38, signed=True)
 
     def sync_read_current_location(
         self, servo_ids: list[int]
@@ -1252,7 +1272,7 @@ class SRAMRegisters:
         for servo_id, response in responses.items():
             if response and isinstance(response, dict) and response.get("parameters"):
                 data: bytes = response["parameters"]
-                results[servo_id] = data[0] | (data[1] << 8)
+                results[servo_id] = decode_signed_word(data[0] | (data[1] << 8))
             else:
                 results[servo_id] = None
         return results
@@ -1286,12 +1306,8 @@ class SRAMRegisters:
         results: dict[int, int | None] = {}
         for servo_id, response in responses.items():
             if response and isinstance(response, dict) and response.get("parameters"):
-                data: list[int] | bytes = response["parameters"]
-                if isinstance(data, (bytes, bytearray)):
-                    raw = data[0] | (data[1] << 8)
-                else:
-                    raw = data[0] | (data[1] << 8)
-                results[servo_id] = decode_signed_word(raw)
+                data: bytes = response["parameters"]
+                results[servo_id] = decode_signed_word(data[0] | (data[1] << 8))
             else:
                 results[servo_id] = None
         return results

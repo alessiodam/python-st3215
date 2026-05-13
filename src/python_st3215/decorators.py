@@ -53,7 +53,7 @@ def encode_signed_word(value: int) -> tuple[int, int]:
         Tuple of (low_byte, high_byte)
     """
     if value < -32767 or value > 32767:
-        raise ValueError
+        raise ValueError(f"encode_signed_word: value {value} out of range [-32767, 32767]")
     low, high = abs(value) & 0xFF, (abs(value) >> 8) & 0x7F
     if value < 0:
         high |= 0x80
