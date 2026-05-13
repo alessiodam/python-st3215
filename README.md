@@ -1,6 +1,5 @@
 # Python-ST3215
 
-[![wakatime](https://wakatime.com/badge/user/b67f4ae3-1ee8-40ea-b8d8-196354064008/project/2d953882-4dfb-4c53-8a18-c698dc275f82.svg)](https://wakatime.com/badge/user/b67f4ae3-1ee8-40ea-b8d8-196354064008/project/2d953882-4dfb-4c53-8a18-c698dc275f82)
 [![PyPI Version](https://img.shields.io/pypi/v/python-st3215)](https://pypi.org/project/python-st3215/)
 ![Python Versions](https://img.shields.io/pypi/pyversions/python-st3215)
 ![License](https://img.shields.io/github/license/alessiodam/python-st3215)
@@ -61,7 +60,7 @@ Hover over classes and functions in your editor to see type hints, parameter des
 | Brand     | SKU   | Product                                                                      |
 |-----------|-------|------------------------------------------------------------------------------|
 | Waveshare | 22414 | [ST3215 Series Serial Bus Servo](https://www.waveshare.com/st3215-servo.htm) |
-|           |       | USB to RS485 Serial Converter                                                |
+| Waveshare | 25514 | [Bus Servo Adapter (A)](https://www.waveshare.com/bus-servo-adapter-a.htm)   |
 
 ## Memory Table
 

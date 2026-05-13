@@ -1,22 +1,24 @@
-name: Type Check
+name: Tests
 
 on:
   push:
     paths:
       - "src/**/*.py"
+      - "tests/**/*.py"
       - "pyproject.toml"
       - "requirements.txt"
-      - ".github/workflows/type-check.yml"
+      - ".github/workflows/test.yml"
   pull_request:
     paths:
       - "src/**/*.py"
+      - "tests/**/*.py"
       - "pyproject.toml"
       - "requirements.txt"
-      - ".github/workflows/type-check.yml"
+      - ".github/workflows/test.yml"
 
 jobs:
-  type-check:
-    name: Type Checking with mypy (Python ${{ matrix.python-version }})
+  test:
+    name: Unit Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -31,8 +33,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install mypy
           pip install -r requirements.txt
-          pip install .
-      - name: Run mypy
-        run: mypy src/
+          pip install pytest
+          pip install -e .
+      - name: Run tests
+        run: pytest tests/ -v

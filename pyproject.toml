@@ -6,7 +6,7 @@ authors = [
 ]
 description = "A Python library for interfacing with the ST3215 smart servo."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "pyserial >= 3.4",
 ]
@@ -21,7 +21,6 @@ classifiers = [
     "Topic :: System :: Hardware",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -45,8 +44,11 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 path = "src/python_st3215/__init__.py"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.9"
 packages = ["python_st3215"]
 exclude = ["examples"]
 strict = true
