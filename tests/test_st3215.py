@@ -32,10 +32,9 @@ def _make_ctrl(read_data: bytes = b"") -> tuple[ST3215, MagicMock]:
     return ctrl, mock_ser
 
 
-def _valid_response(servo_id: int, params: bytes = b"") -> bytes:
+def _valid_response(servo_id: int, params: bytes = b"", error: int = 0) -> bytes:
     """Build a well-formed response packet."""
     length = len(params) + 2
-    error = 0
     checksum_base = servo_id + length + error + sum(params)
     checksum = (~checksum_base) & 0xFF
     return bytes([0xFF, 0xFF, servo_id, length, error]) + params + bytes([checksum])
@@ -164,6 +163,51 @@ class TestParseResponse:
         data = _valid_response(3)
         parsed = ctrl.parse_response(data)
         assert parsed["parameters"] == b""
+
+
+class TestOnStatus:
+    def test_reports_set_and_clear(self):
+        ctrl, _ = _make_ctrl()
+        seen: list[tuple[int, int]] = []
+        ctrl.on_status = lambda sid, err: seen.append((sid, err))
+        ctrl.parse_response(_valid_response(1, error=0x20))
+        ctrl.parse_response(_valid_response(1))
+        assert seen == [(1, 0x20), (1, 0)]
+
+    def test_called_before_raise(self):
+        ctrl, _ = _make_ctrl()
+        seen: list[tuple[int, int]] = []
+        ctrl.on_status = lambda sid, err: seen.append((sid, err))
+        with pytest.raises(ServoStatusError):
+            ctrl.parse_response(_valid_response(1, error=0x04), raise_on_error=True)
+        assert seen == [(1, 0x04)]
+
+    def test_not_called_on_bad_checksum(self):
+        ctrl, _ = _make_ctrl()
+        seen: list[tuple[int, int]] = []
+        ctrl.on_status = lambda sid, err: seen.append((sid, err))
+        data = bytearray(_valid_response(1, error=0x04))
+        data[-1] ^= 0xFF
+        with pytest.raises(ChecksumError):
+            ctrl.parse_response(bytes(data))
+        assert seen == []
+
+    def test_suppresses_warning(self, caplog):
+        ctrl, _ = _make_ctrl()
+        ctrl.on_status = lambda sid, err: None
+        with caplog.at_level("WARNING", logger="ST3215"):
+            ctrl.parse_response(_valid_response(1, error=0x20))
+        assert caplog.records == []
+
+    def test_high_level_read_keeps_value_and_reports(self):
+        seen: list[tuple[int, int]] = []
+        mock_ser = MagicMock()
+        mock_ser.is_open = True
+        mock_ser.read.return_value = _valid_response(1, bytes([0x01]), error=0x20)
+        ctrl = ST3215(ser=mock_ser, on_status=lambda sid, err: seen.append((sid, err)))
+        servo = ctrl.wrap_servo(1, verify=False)
+        assert servo.sram.read_torque_switch() == 1
+        assert seen == [(1, 0x20)]
 
 
 class TestReadResponse:

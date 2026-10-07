@@ -15,7 +15,7 @@ from .instructions import Instruction
 from .servo import Servo
 from .st3215 import ST3215
 
-__version__ = "1.2.1"
+__version__ = "1.3.0"
 
 __all__ = [
     "__version__",
