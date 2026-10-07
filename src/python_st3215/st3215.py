@@ -65,6 +65,7 @@ class ST3215:
         retry_count: int = 3,
         retry_delay: float = 0.01,
         ser: Optional[_SerialLike] = None,
+        on_status: Optional[Callable[[int, int], None]] = None,
     ) -> None:
         """
         Initialize the ST3215 controller with the given serial port settings.
@@ -78,6 +79,10 @@ class ST3215:
             ser (Optional[_SerialLike]): Optional existing serial-like object to use instead
                 of opening a new port. Must expose ``read``, ``write``, ``flush``, ``close``,
                 ``is_open``, and ``timeout``.
+            on_status (Optional[Callable[[int, int], None]]): Optional callback invoked
+                as ``on_status(servo_id, error)`` for every valid response packet,
+                including ``error == 0``, so fault set/clear transitions can be tracked.
+                When set, non-zero error bytes are not logged as warnings.
 
         Raises:
             ValueError: If neither port nor ser is provided.
@@ -94,6 +99,7 @@ class ST3215:
         self.read_timeout = read_timeout
         self.retry_count = retry_count
         self.retry_delay = retry_delay
+        self.on_status = on_status
 
         try:
             if ser is not None:
@@ -285,10 +291,15 @@ class ST3215:
             )
             self.logger.error(error_msg)
             raise ChecksumError(error_msg)
+        if self.on_status is not None:
+            self.on_status(servo_id, error)
         if error != 0:
             if raise_on_error:
                 raise ServoStatusError(servo_id, error)
-            self.logger.warning(f"Servo {servo_id} reported error code: {error:#02x}")
+            if self.on_status is None:
+                self.logger.warning(
+                    f"Servo {servo_id} reported error code: {error:#02x}"
+                )
         parsed: dict[str, object] = {
             "header": header,
             "id": servo_id,
